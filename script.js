@@ -1,95 +1,137 @@
 let score = 0;
 let current = 0;
-let timeLeft = 20;
+let time = 10;
 let timer;
+const MIN_SCORE = 30;
+let rotation = 0;
 
 const questions = [
-    {
-        q: "Why are HYV seeds preferred?",
-        options: ["Low yield", "High yield", "More weeds", "Less nutrition"],
-        answer: 1
-    },
-    {
-        q: "Which is a modern irrigation method?",
-        options: ["Flooding", "Drip irrigation", "Canal", "Rainfall"],
-        answer: 1
-    },
-    {
-        q: "Natural pest control is called?",
-        options: ["Chemical control", "Biological control", "Mechanical", "Fire"],
-        answer: 1
-    },
-    {
-        q: "Poultry farming provides?",
-        options: ["Milk", "Eggs and meat", "Wool", "Honey"],
-        answer: 1
-    }
+    { q: "HYV seeds give?", o:["Low yield","High yield"], a:1 },
+    { q: "Drip irrigation saves?", o:["Water","Labour"], a:0 },
+    { q: "Biological control uses?", o:["Chemicals","Predators"], a:1 },
+    { q: "Poultry provides?", o:["Milk","Eggs"], a:1 }
 ];
 
-function loadQuestion() {
-    clearInterval(timer);
-    timeLeft = 30;
+const bonusQ = { q:"Organic farming is?", o:["Eco-friendly","Harmful"], a:0 };
 
-    document.getElementById("timer").innerText = `Time Left: ${timeLeft}s`;
+const dares = [
+    "🐄 Moo like a cow",
+    "🌱 Act like planting seeds",
+    "🐔 Act like a chicken",
+    "🌍 Say 'Save the soil!' loudly"
+];
 
+const sounds = [
+    correctSound, wrongSound, winSound
+];
+
+function setVolume(v){ sounds.forEach(s=>s.volume=v); }
+
+function loadQuestion(){
+    if(current >= questions.length){
+        endGame();
+        return;
+    }
     let q = questions[current];
-    document.getElementById("question").innerText = q.q;
+    question.innerText = q.q;
+    options.innerHTML = "";
 
-    let optionsDiv = document.getElementById("options");
-    optionsDiv.innerHTML = "";
-
-    q.options.forEach((opt, i) => {
-        let btn = document.createElement("div");
-        btn.innerText = opt;
-        btn.className = "option";
-        btn.onclick = () => checkAnswer(i);
-        optionsDiv.appendChild(btn);
+    q.o.forEach((t,i)=>{
+        let d = document.createElement("div");
+        d.className="option";
+        d.innerText=t;
+        d.onclick=()=>checkAnswer(i,q);
+        options.appendChild(d);
     });
 
     startTimer();
 }
 
-function startTimer() {
-    timer = setInterval(() => {
-        timeLeft--;
-        document.getElementById("timer").innerText = `Time Left: ${timeLeft}s`;
-
-        if (timeLeft === 0) {
-            clearInterval(timer);
-            score -= 5;
-            updateScore();
-            nextQuestion();
-        }
-    }, 1000);
-}
-
-function checkAnswer(selected) {
+function startTimer(){
     clearInterval(timer);
+    time = 10;
+    timerFill.style.width="100%";
 
-    if (selected === questions[current].answer) {
-        score += 10;
-        alert("✅ Correct!");
+    timer = setInterval(()=>{
+        time--;
+        timerFill.style.width=(time*10)+"%";
+        if(time===0){
+            clearInterval(timer);
+            wrongSound.play();
+            score-=5;
+            next();
+        }
+    },1000);
+}
+
+function checkAnswer(i,q){
+    clearInterval(timer);
+    if(i===q.a){
+        correctSound.play();
+        score+=10;
     } else {
-        score -= 5;
-        alert("❌ Wrong!");
+        wrongSound.play();
+        score-=5;
     }
-
-    updateScore();
-    nextQuestion();
+    next();
 }
 
-function updateScore() {
-    document.getElementById("score").innerText = `Food Score: ${score}`;
+function next(){
+    scoreDiv();
+    current++;
+    loadQuestion();
 }
 
-function nextQuestion() {
-    if (score >= 100) {
-        alert("🏆 Congratulations! You improved food resources!");
-        return;
-    }
+function scoreDiv(){
+    score.innerText="Score: "+score;
+}
 
-    current = (current + 1) % questions.length;
-    setTimeout(loadQuestion, 500);
+function endGame(){
+    if(score>=MIN_SCORE){
+        winSound.play();
+        resultBox.classList.remove("hidden");
+        finalScore.innerText="Final Score: "+score;
+    } else {
+        spinnerBox.classList.remove("hidden");
+    }
+}
+
+function spinWheel(){
+    let wheel = spinnerWheel;
+    let spin = Math.floor(Math.random()*360)+1080;
+    rotation += spin;
+    wheel.style.transform=`rotate(${rotation}deg)`;
+
+    setTimeout(()=>{
+        let pos = rotation % 360;
+        let yes = (pos<60 || (pos>180 && pos<240));
+        spinnerBox.classList.add("hidden");
+        yes ? bonusRound() : dareRound();
+    },3000);
+}
+
+function bonusRound(){
+    question.innerText = bonusQ.q;
+    options.innerHTML="";
+    bonusQ.o.forEach((t,i)=>{
+        let d=document.createElement("div");
+        d.className="option";
+        d.innerText=t;
+        d.onclick=()=>{
+            if(i===bonusQ.a) score+=10;
+            score>=MIN_SCORE ? endGame() : dareRound();
+        }
+        options.appendChild(d);
+    });
+}
+
+function dareRound(){
+    dareBox.classList.remove("hidden");
+    dareText.innerText = dares[Math.floor(Math.random()*dares.length)];
+}
+
+function restartGame(){
+    location.reload();
 }
 
 loadQuestion();
